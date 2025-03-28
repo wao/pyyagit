@@ -1,4 +1,4 @@
-from ya_git.git_repo import GitRepo, MergeConflictError
+from yagit.git_repo import GitRepo, MergeConflictError
 import pytest
 from loguru import logger
 import sh
