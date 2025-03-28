@@ -62,3 +62,8 @@ def test_status_result():
     assert s1.local_branch == "master"
     assert s1.track_info.remote == "origin"
     assert s1.track_info.remote_branch == "master"
+
+    s1 = StatusResult.from_stdout("\n".join([MSG_NO_REMOTE, "M xxx"]))
+    assert not s1.is_track 
+    assert s1.is_dirty
+    assert s1.local_branch == "master"

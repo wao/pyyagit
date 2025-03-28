@@ -148,6 +148,7 @@ class GitRepo:
     @staticmethod
     def is_bare_git(path : Path):
         return path.exists() and (path / "objects").exists() and (path / "refs").exists()
+    
 
     @staticmethod
     def create(path : Path, bare=False):    
@@ -201,7 +202,10 @@ class GitRepo:
             return False
         else:
             return True
-            
+
+    def status(self):
+        out = self.git("status", "-b", "--porcelian")
+        return StatusResult.from_stdout(out)
 
     def sync(self, remote : str, branch : str = "master", r_branch : str = "master"):
         #TODO: failed and resume?
