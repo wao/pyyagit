@@ -49,21 +49,25 @@ def test_git_dirty(git_repo):
 
 
 
-def test_fetch_push(git_repo, git_repo2, bare_repo):
+def do_fetch_push(git_repo, git_repo2, bare_repo):
     git_repo.add_remote("origin", bare_repo.path)
     git_repo2.add_remote("origin", bare_repo.path)
     (git_repo.path / "test.txt").write_text("hello world!")
     git_repo.auto_commit()
     assert not git_repo.is_dirty()
-    git_repo.push("origin")
+    git_repo.push("origin", set_upstream=True)
     target = git_repo2.path/"test.txt"
     assert not target.exists()
     git_repo2.fetch("origin")
     git_repo2.merge("origin/master") 
+    git_repo2.set_upstream_branch("origin", "master")
     assert target.exists()
 
+def test_fetch_push(git_repo, git_repo2, bare_repo):
+    do_fetch_push(git_repo, git_repo2, bare_repo)
+
 def test_conflict(git_repo, git_repo2, bare_repo):
-    test_fetch_push(git_repo, git_repo2, bare_repo)
+    do_fetch_push(git_repo, git_repo2, bare_repo)
     (git_repo.path / "test.txt").write_text("hello world2!")
     git_repo.auto_commit()
     git_repo.push("origin")
@@ -86,3 +90,31 @@ def test_diff(git_repo, git_repo2, bare_repo):
     assert git_repo.diff("master", "origin/master")
     git_repo.push("origin")
     assert not git_repo.diff("master", "origin/master")
+
+
+def test_status(git_repo, git_repo2, bare_repo):
+    s1 = git_repo.status()
+    assert not s1.is_track
+    assert not s1.is_dirty
+    do_fetch_push(git_repo, git_repo2, bare_repo)
+    s1 = git_repo.status()
+    assert s1.is_track
+    assert s1.track_info.remote == "origin"
+    assert s1.track_info.remote_branch == "master"
+    assert s1.track_info.patch_count == 0
+    assert not s1.is_dirty
+    (git_repo.path / "test.txt").write_text("hello world2!")
+    s1 = git_repo.status()
+    assert s1.is_track
+    assert s1.is_dirty
+    git_repo.auto_commit()
+    s1 = git_repo.status()
+    assert not s1.is_dirty
+    assert s1.track_info.patch_count == 1 
+    git_repo.push("origin")
+    s1 = git_repo.status()
+    assert s1.track_info.patch_count == 0
+    git_repo2.fetch("origin")
+    print(git_repo2.path)
+    s1 = git_repo2.status()
+    assert s1.track_info.patch_count == -1

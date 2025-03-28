@@ -1,5 +1,5 @@
 import sh
-from sh.contrib import git
+from sh.contrib import git as agit
 from pathlib import Path
 from yautils import *
 from typing import Optional
@@ -10,6 +10,27 @@ import inspect
 import re
 from enum import Enum
 from dataclasses import dataclass
+
+class MyGitExe:
+    def __init__(self, exe=agit, argv = []):
+        self.exe = exe
+        self.argv = argv 
+
+    def __call__(self, *argv):
+        logger.debug("git {} {}",self.argv, argv)
+        out = self.exe(*argv)
+        logger.debug("output {}", out)
+        return out
+
+    def bake(self, *argv):
+        ret = self.exe.bake(*argv)
+        return MyGitExe(ret, self.argv + list(argv))
+
+    def __getattr__(self, name):
+        ret = getattr(self.exe, name)
+        return MyGitExe(ret, self.argv + [name])
+
+git = MyGitExe()
 
 class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
@@ -36,7 +57,7 @@ class InterceptHandler(logging.Handler):
 
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
-logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+#  logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
 class MergeConflictError(RuntimeError):
     def __init__(self, msg : str, git_repo : "GitRepo", sh_exception : sh.ErrorReturnCode ):
@@ -180,12 +201,15 @@ class GitRepo:
         yassert(self.has_remote(remote))
         self.git.fetch(remote,ref)
 
-    def push(self, remote : str, ref : str = "master"):
+    def push(self, remote : str, ref : str = "master", set_upstream=False):
         yassert(self.has_remote(remote))
-        self.git.push(remote, "-u", ref)
+        if set_upstream:
+            self.git.push(remote, "-u", ref)
+        else:
+            self.git.push(remote, ref)
 
     def set_upstream_branch(self, remote : str, branch : str):
-        self.git.branch("--set_upstream_branch", "{}/{}", remote, branch)
+        self.git.branch("--set-upstream-to", "{}/{}".format(remote, branch))
 
     def merge(self, branch : str):
         try:
@@ -204,8 +228,8 @@ class GitRepo:
             return True
 
     def status(self):
-        out = self.git("status", "-b", "--porcelian")
-        return StatusResult.from_stdout(out)
+        out = self.git("status", "-b", "--porcelain")
+        return StatusResult.from_stdout(out.strip())
 
     def sync(self, remote : str, branch : str = "master", r_branch : str = "master"):
         #TODO: failed and resume?
