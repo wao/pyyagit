@@ -7,6 +7,9 @@ from datetime import datetime
 import logging
 from loguru import logger
 import inspect
+import re
+from enum import Enum
+from dataclasses import dataclass
 
 class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
@@ -40,6 +43,63 @@ class MergeConflictError(RuntimeError):
         super().__init__(msg)
         self.sh_exception = sh_exception
         self.git_repo = git_repo
+
+
+RE_GIT_NO_COMMITS = re.compile(r'^## No commits yet on (?P<local_branch>\w+)$')
+RE_GIT_STATUS = re.compile(r'^## (?P<local_branch>\w+)(...(?P<remote>\w+)/(?P<remote_branch>\w+)( \[(?P<ver_dir>\w+) (?P<patch_count>[0-9]+)\])?)?$')
+
+@dataclass
+class TrackInfo:
+    remote : str 
+    remote_branch : str
+    patch_count : int 
+
+@dataclass
+class StatusResult:
+    local_branch : str
+    track : Optional[TrackInfo]
+    is_dirty : bool 
+
+    @property
+    def is_track(self):
+        return self.track is not None
+
+    @property
+    def track_info(self):
+        return not_null(self.track)
+
+    @classmethod
+    def from_stdout(cls, msg : str):
+        lines = msg.split("\n")
+        return cls(*cls._match_first_line(lines[0]), len(lines)>1)
+
+    @classmethod
+    def _match_to_rstatus(cls, m):
+        if m["remote"] is None:
+            return None
+        elif m["ver_dir"] is None:
+            return TrackInfo( m["remote"], m["remote_branch"], 0)
+        elif m["ver_dir"] == "ahead":
+            return TrackInfo( m["remote"], m["remote_branch"], int(m["patch_count"]))
+        elif m["ver_dir"] == "behind":
+            return TrackInfo( m["remote"], m["remote_branch"], -1 * int(m["patch_count"]))
+        else:
+            raise RuntimeError("Unkown version dir {}".format(m['ver_dir']))
+
+
+    @classmethod
+    def _match_first_line(cls, line : str):
+        m =  RE_GIT_NO_COMMITS.match(line)
+        if m is not None:
+            rstatus = False
+            local_branch = m["local_branch"]
+            return (local_branch, None)
+        else:
+            m = RE_GIT_STATUS.match(line)
+            if m is not None:
+                return (m["local_branch"], cls._match_to_rstatus(m))
+            else:
+                raise RuntimeError(f"Not known format of status line f{line}")
 
 
 class GitRepo:
