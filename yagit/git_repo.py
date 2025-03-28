@@ -67,7 +67,7 @@ class MergeConflictError(RuntimeError):
 
 
 RE_GIT_NO_COMMITS = re.compile(r'^## No commits yet on (?P<local_branch>\w+)$')
-RE_GIT_STATUS = re.compile(r'^## (?P<local_branch>\w+)(...(?P<remote>\w+)/(?P<remote_branch>\w+)( \[(?P<ver_dir>\w+) (?P<patch_count>[0-9]+)(, (?P<divert>\w+) ([0-9]+))?])?)?$')
+RE_GIT_STATUS = re.compile(r'^## (?P<local_branch>\w+(\.\w+)*)(...(?P<remote>\w+)/(?P<remote_branch>\w+(\.\w+)*)( \[(?P<ver_dir>\w+) (?P<patch_count>[0-9]+)(, (?P<divert>\w+) ([0-9]+))?])?)?$')
 
 class BranchDivertError(RuntimeError):
     def __init__(self, msg):

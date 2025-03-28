@@ -7,6 +7,7 @@ MSG_SAME_REMOTE = "## master...origin/master"
 MSG_AHEAD_REMOTE = "## master...origin/master [ahead 1]"
 MSG_BEHIND_REMOTE = "## react_pdf_js...origin/master [behind 38]"
 MSG_DIVERT_REMOTE = "## master...origin/master [ahead 1, behind 1]"
+MSG_WITH_DOT = "## v5.6.4.2...origin/v5.6.4.2"
 
 
 def test_status_result():
@@ -67,3 +68,10 @@ def test_status_result():
     assert not s1.is_track 
     assert s1.is_dirty
     assert s1.local_branch == "master"
+
+def test_name_with_dot():
+    s1 = StatusResult.from_stdout(MSG_WITH_DOT)
+    assert s1.is_track 
+    assert s1.local_branch == "v5.6.4.2"
+    assert s1.track_info.remote == "origin"
+    assert s1.track_info.remote_branch == "v5.6.4.2"
