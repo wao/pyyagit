@@ -46,13 +46,36 @@ class MergeConflictError(RuntimeError):
 
 
 RE_GIT_NO_COMMITS = re.compile(r'^## No commits yet on (?P<local_branch>\w+)$')
-RE_GIT_STATUS = re.compile(r'^## (?P<local_branch>\w+)(...(?P<remote>\w+)/(?P<remote_branch>\w+)( \[(?P<ver_dir>\w+) (?P<patch_count>[0-9]+)\])?)?$')
+RE_GIT_STATUS = re.compile(r'^## (?P<local_branch>\w+)(...(?P<remote>\w+)/(?P<remote_branch>\w+)( \[(?P<ver_dir>\w+) (?P<patch_count>[0-9]+)(, (?P<divert>\w+) ([0-9]+))?])?)?$')
+
+class BranchDivertError(RuntimeError):
+    def __init__(self, msg):
+        super().__init__(msg)
 
 @dataclass
 class TrackInfo:
     remote : str 
     remote_branch : str
-    patch_count : int 
+    _patch_count : Optional[int]
+
+    @property
+    def patch_count(self):
+        if self._patch_count is None:
+            raise BranchDivertError("Branch dirvert, no patch count")
+        else:
+            return self._patch_count
+
+    @property
+    def is_divert(self):
+        return self._patch_count is None
+
+    @property
+    def is_ahead(self):
+        return self.patch_count > 0
+
+    @property
+    def is_behind(self):
+        return self.patch_count < 0
 
 @dataclass
 class StatusResult:
@@ -79,6 +102,8 @@ class StatusResult:
             return None
         elif m["ver_dir"] is None:
             return TrackInfo( m["remote"], m["remote_branch"], 0)
+        elif m["divert"] is not None:
+            return TrackInfo( m["remote"], m["remote_branch"], None)
         elif m["ver_dir"] == "ahead":
             return TrackInfo( m["remote"], m["remote_branch"], int(m["patch_count"]))
         elif m["ver_dir"] == "behind":
