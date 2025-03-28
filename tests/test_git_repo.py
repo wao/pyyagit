@@ -1,0 +1,88 @@
+from ya_git.git_repo import GitRepo, MergeConflictError
+import pytest
+from loguru import logger
+import sh
+
+def test_hello():
+    assert True
+
+
+def test_git_create(tmp_path):
+    git_root2 = tmp_path / "git12"
+    git_root2.mkdir()
+    assert git_root2.exists()
+    assert not GitRepo.is_git(git_root2)
+
+    git_root = tmp_path / "git1"
+    assert not GitRepo.is_git(git_root)
+    GitRepo.create(git_root)
+    assert GitRepo.is_git(git_root)
+    assert not  GitRepo.is_bare_git(git_root)
+
+    git_root3 = tmp_path / "git2"
+    assert not GitRepo.is_git(git_root3)
+    GitRepo.create(git_root3, True)
+    assert not GitRepo.is_git(git_root3)
+    assert GitRepo.is_bare_git(git_root3)
+
+
+@pytest.fixture
+def git_repo(tmp_path):
+    git_root = tmp_path / "git1"
+    return  GitRepo.create(git_root)
+
+@pytest.fixture
+def git_repo2(tmp_path):
+    git_root = tmp_path / "git2"
+    return  GitRepo.create(git_root)
+
+@pytest.fixture
+def bare_repo(tmp_path):
+    git_root = tmp_path / "bare"
+    return  GitRepo.create(git_root, True)
+
+
+def test_git_dirty(git_repo):
+    assert not git_repo.is_dirty()
+    (git_repo.path / "test.txt").write_text("hello world!")
+    assert git_repo.is_dirty()
+
+
+
+def test_fetch_push(git_repo, git_repo2, bare_repo):
+    git_repo.add_remote("origin", bare_repo.path)
+    git_repo2.add_remote("origin", bare_repo.path)
+    (git_repo.path / "test.txt").write_text("hello world!")
+    git_repo.auto_commit()
+    assert not git_repo.is_dirty()
+    git_repo.push("origin")
+    target = git_repo2.path/"test.txt"
+    assert not target.exists()
+    git_repo2.fetch("origin")
+    git_repo2.merge("origin/master") 
+    assert target.exists()
+
+def test_conflict(git_repo, git_repo2, bare_repo):
+    test_fetch_push(git_repo, git_repo2, bare_repo)
+    (git_repo.path / "test.txt").write_text("hello world2!")
+    git_repo.auto_commit()
+    git_repo.push("origin")
+    assert not git_repo.diff("master", "origin/master")
+    (git_repo2.path / "test.txt").write_text("hello world3!")
+    git_repo2.auto_commit()
+    git_repo2.fetch("origin")
+    with pytest.raises(MergeConflictError):
+        git_repo2.merge("origin/master") 
+
+def test_diff(git_repo, git_repo2, bare_repo):
+    git_repo.add_remote("origin", bare_repo.path)
+    git_repo2.add_remote("origin", bare_repo.path)
+    (git_repo.path / "test.txt").write_text("hello world!")
+    git_repo.auto_commit()
+    git_repo.push("origin")
+    assert not git_repo.diff("master", "origin/master")
+    (git_repo.path / "test.txt").write_text("hello world2!")
+    git_repo.auto_commit()
+    assert git_repo.diff("master", "origin/master")
+    git_repo.push("origin")
+    assert not git_repo.diff("master", "origin/master")
