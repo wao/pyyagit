@@ -10,6 +10,7 @@ import inspect
 import re
 from enum import Enum
 from dataclasses import dataclass
+import platform
 
 class MyGitExe:
     def __init__(self, exe=agit, argv = []):
@@ -181,7 +182,7 @@ class GitRepo:
             raise MergeConflictError("Commit fail due to merge conflict", self, None)
 
         self.git.add(".")
-        self.git.commit("-m", "auto commit on " + datetime.now().isoformat())
+        self.git.commit("-m", "auto commit on {} at {} ".format(datetime.now().isoformat(), platform.node()))
 
     @staticmethod
     def is_git(path : Path):
