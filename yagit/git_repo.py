@@ -222,6 +222,9 @@ class GitRepo:
         yassert(self.has_remote(remote))
         self.git.fetch(remote,ref)
 
+    def pull(self):
+        return self.git.pull()
+
     def push(self, remote : str, ref : str = "master", set_upstream=False):
         yassert(self.has_remote(remote))
         if set_upstream:
