@@ -77,6 +77,8 @@ def test_conflict(git_repo, git_repo2, bare_repo):
     git_repo2.fetch("origin")
     with pytest.raises(MergeConflictError):
         git_repo2.merge("origin/master") 
+    with pytest.raises(MergeConflictError):
+        git_repo2.auto_commit()
 
 def test_diff(git_repo, git_repo2, bare_repo):
     git_repo.add_remote("origin", bare_repo.path)

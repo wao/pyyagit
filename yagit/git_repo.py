@@ -73,6 +73,10 @@ class BranchDivertError(RuntimeError):
     def __init__(self, msg):
         super().__init__(msg)
 
+class NoBranchError(RuntimeError):
+    def __init__(self, msg):
+        super().__init__(msg)
+
 @dataclass
 class TrackInfo:
     remote : str 
@@ -100,9 +104,20 @@ class TrackInfo:
 
 @dataclass
 class StatusResult:
-    local_branch : str
+    local_branch_name : Optional[str]
     track : Optional[TrackInfo]
     is_dirty : bool 
+
+    @property
+    def local_branch(self):
+        if self.local_branch_name is None:
+            raise NoBranchError("git is in detach status")
+        else:
+            return self.local_branch_name
+
+    @property
+    def is_detach(self):
+        return self.local_branch_name is None
 
     @property
     def is_track(self):
@@ -135,6 +150,8 @@ class StatusResult:
 
     @classmethod
     def _match_first_line(cls, line : str):
+        if line == "## HEAD (no branch)":
+            return (None, None)
         m =  RE_GIT_NO_COMMITS.match(line)
         if m is not None:
             rstatus = False
@@ -159,6 +176,10 @@ class GitRepo:
         return len(out) != 0
 
     def auto_commit(self):
+        if (self.path / ".git/MERGE_HEAD").exists():
+            logger.error("A merge confict is ongoing. Can't do auto commit")
+            raise MergeConflictError("Commit fail due to merge conflict", self, None)
+
         self.git.add(".")
         self.git.commit("-m", "auto commit on " + datetime.now().isoformat())
 

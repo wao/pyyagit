@@ -1,4 +1,4 @@
-from yagit.git_repo import BranchDivertError, StatusResult
+from yagit.git_repo import BranchDivertError, NoBranchError, StatusResult
 import pytest
 
 MSG_NO_COMMIT = "## No commits yet on master"
@@ -7,6 +7,7 @@ MSG_SAME_REMOTE = "## master...origin/master"
 MSG_AHEAD_REMOTE = "## master...origin/master [ahead 1]"
 MSG_BEHIND_REMOTE = "## react_pdf_js...origin/master [behind 38]"
 MSG_DIVERT_REMOTE = "## master...origin/master [ahead 1, behind 1]"
+MSG_DETACH = "## HEAD (no branch)"
 MSG_WITH_DOT = "## v5.6.4.2...origin/v5.6.4.2"
 
 
@@ -75,3 +76,10 @@ def test_name_with_dot():
     assert s1.local_branch == "v5.6.4.2"
     assert s1.track_info.remote == "origin"
     assert s1.track_info.remote_branch == "v5.6.4.2"
+
+def test_name_detach():
+    s1 = StatusResult.from_stdout(MSG_DETACH)
+    assert not s1.is_track 
+    assert s1.is_detach
+    with pytest.raises(NoBranchError):
+        s1.local_branch
