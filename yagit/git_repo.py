@@ -183,7 +183,7 @@ class GitRepo:
                 git = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
                 rpath = Path(path.path)
         else:
-            git = git.bake("-C",path)
+            git = agit.bake("-C",path)
             rpath = path
 
         return (git, rpath)

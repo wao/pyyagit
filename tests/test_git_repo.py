@@ -38,7 +38,12 @@ def test_ssh_git_create(tmp_path):
 @pytest.fixture
 def git_repo(tmp_path):
     git_root = tmp_path / "git1"
-    return  GitRepo.create(git_root)
+    return GitRepo.create(git_root)
+
+@pytest.fixture
+def ssh_git_repo(tmp_path):
+    git_root = UPath( f"ssh://127.0.0.1/{tmp_path}") / "sshgit1"
+    return GitRepo.create(git_root)
 
 @pytest.fixture
 def git_repo2(tmp_path):
@@ -46,17 +51,29 @@ def git_repo2(tmp_path):
     return  GitRepo.create(git_root)
 
 @pytest.fixture
+def ssh_git_repo2(tmp_path):
+    git_root = UPath( f"ssh://127.0.0.1/{tmp_path}") / "sshgit2"
+    return  GitRepo.create(git_root)
+
+@pytest.fixture
 def bare_repo(tmp_path):
     git_root = tmp_path / "bare"
     return  GitRepo.create(git_root, True)
 
+@pytest.fixture
+def ssh_bare_repo(tmp_path):
+    git_root = UPath( f"ssh://127.0.0.1/{tmp_path}") / "sshbare"
+    return  GitRepo.create(git_root, True)
 
-def test_git_dirty(git_repo):
+
+def do_test_git_dirty(git_repo):
     assert not git_repo.is_dirty()
     (git_repo.path / "test.txt").write_text("hello world!")
     assert git_repo.is_dirty()
 
-
+def test_git_dirty(git_repo, ssh_git_repo):
+    do_test_git_dirty(git_repo)
+    do_test_git_dirty(ssh_git_repo)
 
 def do_fetch_push(git_repo, git_repo2, bare_repo):
     git_repo.add_remote("origin", bare_repo.path)
@@ -74,6 +91,9 @@ def do_fetch_push(git_repo, git_repo2, bare_repo):
 
 def test_fetch_push(git_repo, git_repo2, bare_repo):
     do_fetch_push(git_repo, git_repo2, bare_repo)
+
+def test_ssh_fetch_push(ssh_git_repo, ssh_git_repo2, ssh_bare_repo):
+    do_fetch_push(ssh_git_repo, ssh_git_repo2, ssh_bare_repo)
 
 def test_conflict(git_repo, git_repo2, bare_repo):
     do_fetch_push(git_repo, git_repo2, bare_repo)
