@@ -2,12 +2,16 @@ from yagit.git_repo import GitRepo, MergeConflictError
 import pytest
 from loguru import logger
 import sh
+from pathlib import Path
+from upath import UPath
 
 def test_hello():
     assert True
 
 
-def test_git_create(tmp_path):
+
+def do_simple_git_create(tmp_path:Path):
+    logger.info("simple git path {}", tmp_path)
     git_root2 = tmp_path / "git12"
     git_root2.mkdir()
     assert git_root2.exists()
@@ -25,6 +29,11 @@ def test_git_create(tmp_path):
     assert not GitRepo.is_git(git_root3)
     assert GitRepo.is_bare_git(git_root3)
 
+def test_git_create(tmp_path):
+    do_simple_git_create(tmp_path)
+
+def test_ssh_git_create(tmp_path):
+    do_simple_git_create(UPath(f"ssh://127.0.0.1{tmp_path}"))
 
 @pytest.fixture
 def git_repo(tmp_path):

@@ -1,6 +1,8 @@
 import sh
 from sh.contrib import git as agit
+from sh.contrib import ssh
 from pathlib import Path
+from upath import UPath
 from yautils import *
 from typing import Optional
 from datetime import datetime
@@ -12,8 +14,8 @@ from enum import Enum
 from dataclasses import dataclass
 import platform
 
-class MyGitExe:
-    def __init__(self, exe=agit, argv = []):
+class MyShWrap:
+    def __init__(self, exe, argv = []):
         self.exe = exe
         self.argv = argv 
 
@@ -25,13 +27,17 @@ class MyGitExe:
 
     def bake(self, *argv):
         ret = self.exe.bake(*argv)
-        return MyGitExe(ret, self.argv + list(argv))
+        return MyShWrap(ret, self.argv + list(argv))
 
     def __getattr__(self, name):
         ret = getattr(self.exe, name)
-        return MyGitExe(ret, self.argv + [name])
+        return MyShWrap(ret, self.argv + [name])
 
-git = MyGitExe()
+git = MyShWrap(agit)
+
+def bind_sshgit(host:str):
+    return MyShWrap(sh.ssh.bake(host).bake("git"))
+
 
 class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
@@ -167,9 +173,23 @@ class StatusResult:
 
 
 class GitRepo:
-    def __init__(self, path : Path ):
-        self.path = path
-        self.git = git.bake("-C",path)
+    @staticmethod
+    def git_for_path( path : Path | UPath ):
+        if isinstance(path, UPath):
+            if path.protocol != "ssh":
+                raise ValueError("Only support ssh remote filesystem")
+            else:
+                logger.debug("Create git repo for ssh")
+                git = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
+                rpath = Path(path.path)
+        else:
+            git = git.bake("-C",path)
+            rpath = path
+
+        return (git, rpath)
+
+    def __init__(self, path : Path | UPath ):
+        self.git, self.path = GitRepo.git_for_path(path)
 
     def is_dirty(self):
         out = self.git("status","-s")
@@ -194,12 +214,14 @@ class GitRepo:
     
 
     @staticmethod
-    def create(path : Path, bare=False):    
+    def create(path : Path | UPath, bare=False):    
         yassert(not path.exists()) #path should not exist
         path.mkdir(parents=True)
-        args = ["-C", path, "init"]
+        args = ["init"]
         if bare:
             args.append("--bare")
+
+        git, rpath = GitRepo.git_for_path(path)
 
         out = git(*args)
         return GitRepo(path)

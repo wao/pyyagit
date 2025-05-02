@@ -10,7 +10,9 @@ requires-python = ">=3.9,<4.0"
 dependencies = [
     "loguru (>=0.7.3,<0.8.0)",
     "sh (>=2.2.2,<3.0.0)",
-    "yautils @ git+https://github.com/wao/pyyautils.git"
+    "yautils @ git+https://github.com/wao/pyyautils.git",
+    "universal-pathlib (>=0.2.6,<0.3.0)",
+    "paramiko (>=3.5.1,<4.0.0)"
 ]
 
 
