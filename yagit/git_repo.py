@@ -13,25 +13,43 @@ import re
 from enum import Enum
 from dataclasses import dataclass
 import platform
+from contextlib import contextmanager
 
 class MyShWrap:
-    def __init__(self, exe, argv = []):
+    def __init__(self, exe, argv = [], is_log_on = False):
         self.exe = exe
         self.argv = argv 
+        self.is_log_on = is_log_on
 
     def __call__(self, *argv):
-        logger.debug("git {} {}",self.argv, argv)
+        if self.is_log_on:
+            logger.debug("git {} {}",self.argv, argv)
         out = self.exe(*argv)
-        logger.debug("output {}", out)
+        if self.is_log_on:
+            logger.debug("output {}", out)
         return out
 
     def bake(self, *argv):
         ret = self.exe.bake(*argv)
-        return MyShWrap(ret, self.argv + list(argv))
+        return MyShWrap(ret, self.argv + list(argv), self.is_log_on)
 
     def __getattr__(self, name):
         ret = getattr(self.exe, name)
-        return MyShWrap(ret, self.argv + [name])
+        return MyShWrap(ret, self.argv + [name], self.is_log_on)
+
+    @contextmanager
+    def log(self, is_log_on):
+        self.is_log_on = is_log_on
+        yield
+        self.is_log_on = False
+
+    def enable_log(self):
+        self.is_log_on = True
+        return self
+
+    def disable_log(self):
+        self.is_log_on = False
+        return self
 
 git = MyShWrap(agit)
 
@@ -180,13 +198,13 @@ class GitRepo:
                 raise ValueError("Only support ssh remote filesystem")
             else:
                 logger.debug("Create git repo for ssh")
-                git = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
+                rgit = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
                 rpath = Path(path.path)
         else:
-            git = agit.bake("-C",path)
+            rgit = git.bake("-C",path)
             rpath = path
 
-        return (git, rpath)
+        return (rgit, rpath)
 
     def __init__(self, path : Path | UPath ):
         self.git, self.path = GitRepo.git_for_path(path)
