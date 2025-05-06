@@ -21,10 +21,10 @@ class MyShWrap:
         self.argv = argv 
         self.is_log_on = is_log_on
 
-    def __call__(self, *argv):
+    def __call__(self, *argv, **argkw):
         if self.is_log_on:
             logger.debug("git {} {}",self.argv, argv)
-        out = self.exe(*argv)
+        out = self.exe(*argv, **argkw)
         if self.is_log_on:
             logger.debug("output {}", out)
         return out
@@ -285,7 +285,7 @@ class GitRepo:
             else:
                 raise e
 
-    def diff(self, ref_a : str, ref_b : str):
+    def is_diff(self, ref_a : str, ref_b : str):
         out = self.git("diff", ref_a, ref_b)
         if len(out) == 0:
             return False
@@ -309,11 +309,11 @@ class GitRepo:
             r_branch = branch
         logger.info("Fetch remote {}/{}", remote, r_branch)
         self.fetch(remote, r_branch)
-        if self.diff( branch, f"{remote}/{r_branch}"):
+        if self.is_diff( branch, f"{remote}/{r_branch}"):
             logger.info("Merge remote branch {}/{} to current branch", remote, branch)
             self.merge(f"{remote}/{branch}")
 
-        if self.diff( branch, f"{remote}/{r_branch}"):
+        if self.is_diff( branch, f"{remote}/{r_branch}"):
             logger.info("Push local change to remote")
             self.push(remote)
 
