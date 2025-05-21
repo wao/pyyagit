@@ -214,13 +214,13 @@ class GitRepo:
         print(out)
         return len(out) != 0
 
-    def auto_commit(self):
+    def auto_commit(self, msg="auto"):
         if (self.path / ".git/MERGE_HEAD").exists():
             logger.error("A merge confict is ongoing. Can't do auto commit")
             raise MergeConflictError("Commit fail due to merge conflict", self, None)
 
         self.git.add(".")
-        self.git.commit("-m", "auto commit on {} at {} ".format(datetime.now().isoformat(), platform.node()))
+        self.git.commit("-m", "commit on {} at {}: {} ".format(datetime.now().isoformat(), platform.node(), msg))
 
     @staticmethod
     def is_git(path : Path):
