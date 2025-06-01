@@ -197,7 +197,7 @@ class GitRepo:
             if path.protocol != "ssh":
                 raise ValueError("Only support ssh remote filesystem")
             else:
-                logger.debug("Create git repo for ssh")
+                logger.debug("Create git repo for ssh {} storage {}", path, path.storage_options)
                 rgit = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
                 rpath = Path(path.path)
         else:
