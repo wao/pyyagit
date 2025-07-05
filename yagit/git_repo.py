@@ -189,7 +189,6 @@ class StatusResult:
             else:
                 raise RuntimeError(f"Not known format of status line f{line}")
 
-
 class GitRepo:
     @staticmethod
     def git_for_path( path : Path | UPath ):
@@ -199,7 +198,8 @@ class GitRepo:
             else:
                 logger.debug("Create git repo for ssh {} storage {}", path, path.storage_options)
                 rgit = bind_sshgit(path.storage_options["host"]).bake("-C", path.path)
-                rpath = Path(path.path)
+                #rpath = Path(path.path)
+                rpath = path
         else:
             rgit = git.bake("-C",path)
             rpath = path
